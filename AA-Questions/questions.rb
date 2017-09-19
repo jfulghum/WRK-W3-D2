@@ -86,6 +86,22 @@ class User
     end
   end
 
+  def average_karma
+    data = QuestionsDatabase.instance.execute(<<-SQL, @id, @id)
+    SELECT
+  	   COUNT(question_likes.q_id) /CAST(COUNT(DISTINCT(questions.id)) AS FLOAT)
+    FROM
+  	   question_likes
+  	JOIN
+  		questions ON question_likes.q_id = questions.id
+  		JOIN users ON users.id=questions.user_id
+    WHERE
+  	 questions.user_id = ? AND users.id = ?
+    SQL
+    p data
+    data.first.values.first
+  end
+
 
 end
 
@@ -120,6 +136,10 @@ class Question
 
   def self.most_followed(n)
     QuestionFollow.most_followed_questions(n)
+  end
+
+  def self.most_liked(n)
+    QuestionLike.most_liked_questions(ns)
   end
 
   def initialize(options)
@@ -380,6 +400,26 @@ class QuestionLike
       user << User.new(datum)
     end
     user
+  end
+
+  def self.most_liked_questions(n)
+    data = QuestionsDatabase.instance.execute(<<-SQL, n)
+    SELECT
+      *
+    FROM
+      question_likes
+    JOIN
+      questions ON questions.id = q_id
+    GROUP BY
+    q_id
+    ORDER BY COUNT(question_likes.user_id) DESC
+    LIMIT ?
+    SQL
+    questions = []
+    data.each do |datum|
+      questions << Question.new(datum)
+    end
+    questions
   end
 
   def self.num_likes_for_question_id(question_id)
