@@ -51,7 +51,6 @@ CREATE TABLE question_likes (
   id INTEGER PRIMARY KEY,
   q_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
-  likes BOOLEAN,
 
 
   FOREIGN KEY(q_id) REFERENCES questions(id),
@@ -80,7 +79,7 @@ VALUES
   ('I can help! SQL is great', 2, 3, 3);
 
 INSERT INTO
-  question_likes (q_id, user_id, likes)
+  question_likes (q_id, user_id)
 VALUES
-  (1, 2, 1),
-  (2, 3, 1);
+  (1, 2),
+  (2, 3);
