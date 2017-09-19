@@ -57,6 +57,10 @@ class User
     Reply.find_by_user_id(@id)
   end
 
+  def followed_questions
+    QuestionFollow.followed_questions_for_user_id(@id)
+  end
+
 
 end
 
@@ -89,6 +93,10 @@ class Question
     Question.new(data.first)
   end
 
+  def self.most_followed(n)
+    QuestionFollow.most_followed_questions(n)
+  end
+
   def initialize(options)
     @id = options['id']
     @title = options["title"]
@@ -103,6 +111,12 @@ class Question
   def replies
     Reply.find_by_question_id(@id)
   end
+
+  def followers
+    QuestionFollow.followers_for_question_id(@id)
+  end
+
+
 
   # def self.all
   #   data = PlayDBConnection.instance.execute("SELECT * FROM plays")
@@ -145,6 +159,50 @@ class QuestionFollow
     end
     users
   end
+
+  def self.followed_questions_for_user_id(user_id)
+    # want all the followed questions of a certain user
+    #gives us all the
+    data = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+    SELECT
+    *
+    FROM
+    questions
+    JOIN
+    question_follows ON questions.id = question_follows.q_id
+    WHERE
+    question_follows.user_id = ?
+    SQL
+
+    questions = []
+    data.each do |datum|
+      questions << Question.new(datum)
+    end
+    questions
+  end
+
+  def self.most_followed_questions(n)
+    data = QuestionsDatabase.instance.execute(<<-SQL, n)
+    SELECT
+    *
+    FROM
+    question_follows
+    JOIN
+    questions ON questions.id = question_follows.q_id
+    GROUP BY
+    q_id
+    ORDER BY
+    COUNT(question_follows.user_id) DESC
+    LIMIT ?
+    SQL
+
+    questions = []
+    data.each do |datum|
+      questions << Question.new(datum)
+    end
+    questions
+  end
+
 
   def initialize(options)
     @id = options['id']
@@ -234,7 +292,7 @@ class Reply
 
 end
 
-class QuestionLikes
+class QuestionLike
   attr_accessor :q_id, :user_id
   attr_reader :id
 
@@ -247,8 +305,61 @@ class QuestionLikes
     WHERE
     id = ?
     SQL
-    QuestionLikes.new(data.first)
+    QuestionLike.new(data.first)
   end
+
+  def self.likers_for_question_id(question_id)
+    data = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+    SELECT
+    *
+    FROM
+    question_likes
+    JOIN
+    users ON users.id = user_id
+    WHERE
+    q_id = ?
+    SQL
+
+    user = []
+    data.each do |datum|
+      user << User.new(datum)
+    end
+    user
+  end
+
+  def self.num_likes_for_question_id(question_id)
+    data = QuestionsDatabase.instance.execute(<<-SQL, question_id)
+    SELECT
+    COUNT(users.id)
+    FROM
+    question_likes
+    JOIN
+    users ON users.id = user_id
+    WHERE
+    q_id = ?
+    SQL
+    data.first.values.first
+  end
+
+  def self.liked_questions_for_user_id(user_id)
+    data = QuestionsDatabase.instance.execute(<<-SQL, user_id)
+    SELECT
+      *
+    FROM
+      question_likes
+    JOIN
+      questions ON questions.id = q_id
+    WHERE
+      question_likes.user_id = ?
+    SQL
+
+    questions = []
+    data.each do |datum|
+      questions << Question.new(datum)
+    end
+    questions
+  end
+
 
   def initialize(options)
     @id = options['id']
